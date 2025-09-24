@@ -4,24 +4,20 @@ FROM openjdk:17-jdk-slim
 WORKDIR /app
 
 # 安装 Maven
-RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y maven dos2unix && rm -rf /var/lib/apt/lists/*
 
-# 复制父POM文件
-COPY backend-services/pom.xml ./
+# 一次性复制后端多模块项目（确保父子模块关系与源码路径完整）
+COPY backend-services/ ./backend-services/
 
-# 复制user-service的POM文件
-COPY backend-services/user-service/pom.xml ./user-service/
+# 调试：确认UserService.java是否存在且包名正确，并规范化换行符
+RUN find /app/backend-services/user-service/src -maxdepth 3 -type f -name "UserService.java" -print || true \
+    && dos2unix /app/backend-services/user-service/src/main/java/com/ai/qa/user/application/UserService.java || true \
+    && head -n 80 /app/backend-services/user-service/src/main/java/com/ai/qa/user/application/UserService.java || true
 
-# 下载依赖（利用Docker缓存层）
-RUN cd user-service && mvn dependency:go-offline -B
-
-# 复制源代码
-COPY backend-services/user-service/src ./user-service/src
-
-# 构建应用
-WORKDIR /app/user-service
-RUN mvn clean package -DskipTests -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 -U
+# 在父模块下按模块构建，确保注解处理与依赖解析一致
+WORKDIR /app/backend-services
+RUN mvn -pl user-service -am clean package -DskipTests -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 -U
 
 # 运行应用
 EXPOSE 8081
-CMD ["java", "-jar", "target/user-service-1.0-SNAPSHOT.jar"]
+CMD ["java", "-jar", "backend-services/user-service/target/user-service-1.0-SNAPSHOT.jar"]
