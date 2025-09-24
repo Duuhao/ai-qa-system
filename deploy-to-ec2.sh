@@ -15,13 +15,27 @@ fi
 echo "部署版本: $COMMIT_SHA"
 
 # 预检与安装依赖
-echo "=== 预检依赖（aws, docker, docker-compose）==="
-if ! command -v aws >/dev/null 2>&1; then
-  echo "安装 AWS CLI..."
-  sudo yum install -y unzip >/dev/null 2>&1 || true
-  curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
-  unzip -q /tmp/awscliv2.zip -d /tmp && sudo /tmp/aws/install || true
+echo "=== 预检依赖（aws, docker, docker compose）==="
+# 检测包管理器
+if command -v apt-get >/dev/null 2>&1; then
+  PKG_MGR="apt"
+elif command -v yum >/dev/null 2>&1; then
+  PKG_MGR="yum"
+else
+  PKG_MGR=""
 fi
+
+# 安装基础工具 unzip / curl（AWS CLI v2 需要 unzip）
+if [ -n "${PKG_MGR}" ]; then
+  if [ "$PKG_MGR" = "apt" ]; then
+    sudo apt-get update -y >/dev/null 2>&1 || true
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y unzip curl >/dev/null 2>&1 || true
+  else
+    sudo yum install -y unzip curl >/dev/null 2>&1 || true
+  fi
+fi
+
+# 安装 Docker（如未安装）
 if ! command -v docker >/dev/null 2>&1; then
   echo "安装 Docker..."
   curl -fsSL https://get.docker.com | sh
@@ -29,27 +43,39 @@ if ! command -v docker >/dev/null 2>&1; then
   sudo systemctl enable docker || true
   sudo systemctl start docker || true
 fi
-if ! command -v docker-compose >/dev/null 2>&1; then
-  echo "安装 docker-compose 兼容层..."
-  sudo ln -sf /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose || true
-  if ! command -v docker-compose >/dev/null 2>&1; then
-    # 安装 compose v2 插件
+
+# 安装/修复 docker compose（优先使用 docker compose 子命令）
+if ! docker compose version >/dev/null 2>&1; then
+  echo "安装 docker compose 插件..."
+  if [ "$PKG_MGR" = "apt" ]; then
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker-compose-plugin >/dev/null 2>&1 || true
+  elif [ "$PKG_MGR" = "yum" ]; then
+    # 尝试放置到 cli-plugins
     DOCKER_COMPOSE_VERSION="v2.27.0"
     sudo mkdir -p /usr/libexec/docker/cli-plugins
     sudo curl -sSL -o /usr/libexec/docker/cli-plugins/docker-compose \
       https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64
     sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
-    sudo ln -sf /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
   fi
 fi
 
+# 安装 AWS CLI v2（如未安装）
+if ! command -v aws >/dev/null 2>&1; then
+  echo "安装 AWS CLI v2..."
+  curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+  unzip -q /tmp/awscliv2.zip -d /tmp || true
+  sudo /tmp/aws/install -i /usr/local/aws-cli -b /usr/local/bin || true
+fi
+aws --version || true
+
 # 登录 ECR
 echo "=== 登录 ECR ==="
-aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+AWS_REGION_VALUE="ap-southeast-2"
+aws ecr get-login-password --region "$AWS_REGION_VALUE" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
 # 停止现有容器
 echo "=== 停止现有容器 ==="
-docker-compose down || true
+docker compose down || true
 
 # 拉取最新镜像
 echo "=== 拉取最新镜像 ==="
@@ -144,7 +170,7 @@ EOF
 
 # 启动服务
 echo "=== 启动服务 ==="
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 
 # 等待服务启动
 echo "=== 等待服务启动 ==="
@@ -160,3 +186,4 @@ echo "=== 部署完成 ==="
 echo "服务访问地址:"
 echo "  Frontend: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):3000"
 echo "  API Gateway: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):8080"
+
