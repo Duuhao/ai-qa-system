@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ai-qa-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ai_qa_system
+      MYSQL_DATABASE: ai_qa_system
+      MYSQL_USER: ai_qa_user
+      MYSQL_PASSWORD: ai_qa_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - ai-qa-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.user-service
+    container_name: ai-qa-user-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ai_user_system?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ai_qa_system
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mysql
+    networks:
+      - ai-qa-network
+
+  qa-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.qa-service
+    container_name: ai-qa-qa-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ai_qa_system?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ai_qa_system
+    ports:
+      - "8082:8082"
+    depends_on:
+      - mysql
+    networks:
+      - ai-qa-network
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.api-gateway
+    container_name: ai-qa-api-gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8080:8080"
+    depends_on:
+      - user-service
+      - qa-service
+    networks:
+      - ai-qa-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: ai-qa-frontend
+    environment:
+      BACKEND_BASE_URL: http://api-gateway:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+    networks:
+      - ai-qa-network
+
+volumes:
+  mysql_data:
+
+networks:
+  ai-qa-network:
+    driver: bridge

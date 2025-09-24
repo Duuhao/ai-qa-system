@@ -1,0 +1,86 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ ai-qa-system-cicd ]
+  pull_request:
+    branches: [ ai-qa-system-cicd ]
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  ECR_REPOSITORY: duuhao/ai-qa-system
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push API Gateway image
+      run: |
+        docker build -f Dockerfile.api-gateway -t $ECR_REGISTRY/$ECR_REPOSITORY/api-gateway:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY/api-gateway:$IMAGE_TAG
+
+    - name: Build, tag, and push QA Service image
+      run: |
+        docker build -f Dockerfile.qa-service -t $ECR_REGISTRY/$ECR_REPOSITORY/qa-service:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY/qa-service:$IMAGE_TAG
+
+    - name: Build, tag, and push User Service image
+      run: |
+        docker build -f Dockerfile.user-service -t $ECR_REGISTRY/$ECR_REPOSITORY/user-service:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY/user-service:$IMAGE_TAG
+
+    - name: Build, tag, and push Frontend image
+      run: |
+        docker build -f Dockerfile.frontend -t $ECR_REGISTRY/$ECR_REPOSITORY/frontend:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY/frontend:$IMAGE_TAG
+
+    - name: Copy deployment script to EC2
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        source: "deploy-to-ec2.sh"
+        target: "/home/${{ secrets.EC2_USER }}/"
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # 设置环境变量
+          export ECR_REGISTRY=${{ secrets.ECR_REGISTRY }}
+          
+          # 进入项目目录
+          cd /home/${{ secrets.EC2_USER }}/ai-qa-system || (mkdir -p /home/${{ secrets.EC2_USER }}/ai-qa-system && cd /home/${{ secrets.EC2_USER }}/ai-qa-system)
+          
+          # 克隆或更新代码
+          if [ -d ".git" ]; then
+            git pull origin ai-qa-system-cicd
+          else
+            git clone -b ai-qa-system-cicd https://github.com/Duuhao/ai-qa-system.git .
+          fi
+          
+          # 复制部署脚本并执行
+          cp ../deploy-to-ec2.sh .
+          chmod +x deploy-to-ec2.sh
+          ./deploy-to-ec2.sh ${{ github.sha }}

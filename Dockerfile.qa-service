@@ -1,0 +1,22 @@
+# QA Service Dockerfile
+FROM openjdk:17-jdk-slim
+
+WORKDIR /app
+
+# 复制 Maven 配置文件
+COPY backend-services/qa-service/pom.xml .
+COPY backend-services/pom.xml ../
+
+# 下载依赖（利用 Docker 缓存层）
+RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
+RUN mvn dependency:go-offline -B
+
+# 复制源代码
+COPY backend-services/qa-service/src ./src
+
+# 构建应用
+RUN mvn clean package -DskipTests
+
+# 运行应用
+EXPOSE 8082
+CMD ["java", "-jar", "target/qa-service-1.0-SNAPSHOT.jar"]
