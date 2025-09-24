@@ -68,18 +68,12 @@ jobs:
         script: |
           # 设置环境变量
           export ECR_REGISTRY=${{ secrets.ECR_REGISTRY }}
-          
-          # 进入项目目录
-          cd /home/${{ secrets.EC2_USER }}/ai-qa-system || (mkdir -p /home/${{ secrets.EC2_USER }}/ai-qa-system && cd /home/${{ secrets.EC2_USER }}/ai-qa-system)
-          
-          # 克隆或更新代码
-          if [ -d ".git" ]; then
-            git pull origin ai-qa-system-cicd
-          else
-            git clone -b ai-qa-system-cicd https://github.com/Duuhao/ai-qa-system.git .
-          fi
-          
-          # 复制部署脚本并执行
-          cp ../deploy-to-ec2.sh .
-          chmod +x deploy-to-ec2.sh
-          ./deploy-to-ec2.sh ${{ github.sha }}
+
+          # 确保用户家目录存在
+          mkdir -p /home/${{ secrets.EC2_USER }}
+
+          # 确保部署脚本在绝对路径存在并可执行
+          chmod +x /home/${{ secrets.EC2_USER }}/deploy-to-ec2.sh || true
+
+          # 在脚本中执行完整部署逻辑（脚本内部会处理目录与工具安装）
+          /home/${{ secrets.EC2_USER }}/deploy-to-ec2.sh ${{ github.sha }}

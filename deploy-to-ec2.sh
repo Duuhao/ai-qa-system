@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 部署脚本 - 在 EC2 实例上运行
-set -e
+set -euo pipefail
 
 echo "=== 开始部署 AI QA System ==="
 
@@ -14,9 +14,38 @@ fi
 
 echo "部署版本: $COMMIT_SHA"
 
+# 预检与安装依赖
+echo "=== 预检依赖（aws, docker, docker-compose）==="
+if ! command -v aws >/dev/null 2>&1; then
+  echo "安装 AWS CLI..."
+  sudo yum install -y unzip >/dev/null 2>&1 || true
+  curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+  unzip -q /tmp/awscliv2.zip -d /tmp && sudo /tmp/aws/install || true
+fi
+if ! command -v docker >/dev/null 2>&1; then
+  echo "安装 Docker..."
+  curl -fsSL https://get.docker.com | sh
+  sudo usermod -aG docker $USER || true
+  sudo systemctl enable docker || true
+  sudo systemctl start docker || true
+fi
+if ! command -v docker-compose >/dev/null 2>&1; then
+  echo "安装 docker-compose 兼容层..."
+  sudo ln -sf /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose || true
+  if ! command -v docker-compose >/dev/null 2>&1; then
+    # 安装 compose v2 插件
+    DOCKER_COMPOSE_VERSION="v2.27.0"
+    sudo mkdir -p /usr/libexec/docker/cli-plugins
+    sudo curl -sSL -o /usr/libexec/docker/cli-plugins/docker-compose \
+      https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64
+    sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+    sudo ln -sf /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
+  fi
+fi
+
 # 登录 ECR
 echo "=== 登录 ECR ==="
-aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin $ECR_REGISTRY
+aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
 # 停止现有容器
 echo "=== 停止现有容器 ==="
