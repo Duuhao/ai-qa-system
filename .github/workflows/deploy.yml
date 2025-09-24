@@ -9,7 +9,6 @@ on:
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
-  ECR_REPOSITORY: duuhao/ai-qa-system
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
@@ -33,23 +32,23 @@ jobs:
 
     - name: Build, tag, and push API Gateway image
       run: |
-        docker build -f Dockerfile.api-gateway -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG-api-gateway .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG-api-gateway
+        docker build -f Dockerfile.api-gateway -t $ECR_REGISTRY/duuhao/ai-qa-system/api-gateway:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/duuhao/ai-qa-system/api-gateway:$IMAGE_TAG
 
     - name: Build, tag, and push QA Service image
       run: |
-        docker build -f Dockerfile.qa-service -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG-qa-service .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG-qa-service
+        docker build -f Dockerfile.qa-service -t $ECR_REGISTRY/duuhao/ai-qa-system/qa-service:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/duuhao/ai-qa-system/qa-service:$IMAGE_TAG
 
     - name: Build, tag, and push User Service image
       run: |
-        docker build -f Dockerfile.user-service -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG-user-service .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG-user-service
+        docker build -f Dockerfile.user-service -t $ECR_REGISTRY/duuhao/ai-qa-system/user-service:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/duuhao/ai-qa-system/user-service:$IMAGE_TAG
 
     - name: Build, tag, and push Frontend image
       run: |
-        docker build -f Dockerfile.frontend -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG-frontend .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG-frontend
+        docker build -f Dockerfile.frontend -t $ECR_REGISTRY/duuhao/ai-qa-system/frontend:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/duuhao/ai-qa-system/frontend:$IMAGE_TAG
 
     - name: Copy deployment script to EC2
       uses: appleboy/scp-action@v0.1.4
