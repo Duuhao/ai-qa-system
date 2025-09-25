@@ -65,6 +65,7 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
+        envs: "AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_SESSION_TOKEN,AWS_REGION,ECR_REGISTRY"
         script: |
           # 设置环境变量
           export ECR_REGISTRY=${{ secrets.ECR_REGISTRY }}

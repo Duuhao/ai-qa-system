@@ -14,6 +14,26 @@ fi
 
 echo "部署版本: $COMMIT_SHA"
 
+# 配置 AWS 凭证（来自环境变量）
+echo "=== 配置 AWS 凭证 ==="
+mkdir -p ~/.aws
+{
+  echo "[default]"
+  if [ -n "${AWS_ACCESS_KEY_ID:-}" ] && [ -n "${AWS_SECRET_ACCESS_KEY:-}" ]; then
+    echo "aws_access_key_id=${AWS_ACCESS_KEY_ID}"
+    echo "aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}"
+  fi
+  if [ -n "${AWS_SESSION_TOKEN:-}" ]; then
+    echo "aws_session_token=${AWS_SESSION_TOKEN}"
+  fi
+} > ~/.aws/credentials
+
+{
+  echo "[default]"
+  echo "region=${AWS_REGION:-ap-southeast-2}"
+  echo "output=json"
+} > ~/.aws/config
+
 # 预检与安装依赖
 echo "=== 预检依赖（aws, docker, docker compose）==="
 # 检测包管理器
@@ -70,7 +90,7 @@ aws --version || true
 
 # 登录 ECR
 echo "=== 登录 ECR ==="
-AWS_REGION_VALUE="ap-southeast-2"
+AWS_REGION_VALUE="${AWS_REGION:-ap-southeast-2}"
 aws ecr get-login-password --region "$AWS_REGION_VALUE" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
 # 停止现有容器
