@@ -32,11 +32,18 @@ export default function LoginPage() {
       });
 
       const contentType = response.headers.get("content-type") || "";
-      type LoginSuccess = { token: string; user: { username: string } };
+      type LoginSuccessA = { token: string; user: { username: string } };
+      type LoginSuccessB = { token: string; userInfo: { username: string } };
+      type LoginSuccess = LoginSuccessA | LoginSuccessB;
       type LoginError = { error?: string; message?: string };
       type LoginPayload = LoginSuccess | LoginError;
       const isLoginSuccess = (p: unknown): p is LoginSuccess => {
-        return !!p && typeof p === "object" && "token" in (p as Record<string, unknown>) && "user" in (p as Record<string, unknown>);
+        if (!p || typeof p !== "object") return false;
+        const obj = p as Record<string, unknown>;
+        const hasToken = "token" in obj;
+        const hasUser = "user" in obj && typeof (obj as any).user === "object";
+        const hasUserInfo = "userInfo" in obj && typeof (obj as any).userInfo === "object";
+        return !!(hasToken && (hasUser || hasUserInfo));
       };
       let payload: LoginPayload | null = null;
       if (contentType.includes("application/json")) {
@@ -64,7 +71,8 @@ export default function LoginPage() {
       if (!isLoginSuccess(payload)) {
         throw new Error('登录响应格式不正确');
       }
-      login(payload.token, payload.user);
+      const userObj = 'user' in payload ? payload.user : (payload as LoginSuccessB).userInfo;
+      login(payload.token, { username: userObj.username });
 
       // 跳转到聊天页面
       router.push("/chat");
