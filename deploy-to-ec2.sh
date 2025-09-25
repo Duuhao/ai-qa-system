@@ -99,6 +99,22 @@ docker compose down || true
 # 停止上一次使用 prod 文件启动的容器（如有）
 docker compose -f docker-compose.prod.yml down || true
 
+# 清理磁盘空间，避免镜像拉取失败（no space left on device）
+echo "=== 磁盘/镜像用量(清理前) ==="
+df -h || true
+docker system df -v || true
+
+echo "=== 清理 Docker 无用数据 ==="
+# 清理无用容器/网络/镜像/构建缓存与未使用卷（保留正在使用的卷）
+docker system prune -af || true
+docker builder prune -af || true
+docker image prune -af || true
+docker volume prune -f || true
+
+echo "=== 磁盘/镜像用量(清理后) ==="
+df -h || true
+docker system df -v || true
+
 # 拉取最新镜像
 echo "=== 拉取最新镜像 ==="
 docker pull $ECR_REGISTRY/duuhao/ai-qa-system/api-gateway:$COMMIT_SHA
