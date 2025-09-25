@@ -23,6 +23,19 @@ spring:
           uri: http://user-service:8081
           predicates:
             - Path=/api/user/**
+        # Swagger 聚合路由
+        - id: swagger-user
+          uri: http://user-service:8081
+          predicates:
+            - Path=/v3/api-docs/user
+          filters:
+            - RewritePath=/v3/api-docs/user, /v3/api-docs
+        - id: swagger-qa
+          uri: http://qa-service:8082
+          predicates:
+            - Path=/v3/api-docs/qa
+          filters:
+            - RewritePath=/v3/api-docs/qa, /v3/api-docs
     nacos:
       discovery:
         enabled: false

@@ -31,6 +31,19 @@ spring:
           uri: http://localhost:8081
           predicates:
             - Path=/api/user/**
+      # Swagger 聚合路由（将 /v3/api-docs/{service} 转发到各服务的 /v3/api-docs）
+      - id: swagger-user
+        uri: http://localhost:8081
+        predicates:
+          - Path=/v3/api-docs/user
+        filters:
+          - RewritePath=/v3/api-docs/user, /v3/api-docs
+      - id: swagger-qa
+        uri: http://localhost:8082
+        predicates:
+          - Path=/v3/api-docs/qa
+        filters:
+          - RewritePath=/v3/api-docs/qa, /v3/api-docs
     nacos:
       discovery:
         enabled: false

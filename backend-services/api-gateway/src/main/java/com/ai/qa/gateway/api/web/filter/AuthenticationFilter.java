@@ -26,9 +26,19 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
 
-        // 白名单路径
-        List<String> whiteList = List.of("/api/user/register", "/api/user/login", "/api/qa/health", "/api/qa/test", "/api/qa/ask", "/api/user/health");
+        // 白名单路径（允许 swagger 访问）
+        List<String> whiteList = List.of(
+                "/api/user/register", "/api/user/login",
+                "/api/qa/health", "/api/qa/test", "/api/qa/ask", "/api/user/health",
+                "/v3/api-docs", "/swagger-ui/index.html"
+        );
         if (whiteList.contains(request.getURI().getPath())) {
+            return chain.filter(exchange);
+        }
+
+        // 放行 swagger 静态资源前缀
+        String path = request.getURI().getPath();
+        if (path.startsWith("/swagger-ui/") || path.startsWith("/v3/api-docs/")) {
             return chain.filter(exchange);
         }
 
