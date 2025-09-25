@@ -37,12 +37,15 @@ export default function LoginPage() {
       type LoginSuccess = LoginSuccessA | LoginSuccessB;
       type LoginError = { error?: string; message?: string };
       type LoginPayload = LoginSuccess | LoginError;
+      const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
       const isLoginSuccess = (p: unknown): p is LoginSuccess => {
-        if (!p || typeof p !== "object") return false;
+        if (!isObject(p)) return false;
         const obj = p as Record<string, unknown>;
         const hasToken = "token" in obj;
-        const hasUser = "user" in obj && typeof (obj as any).user === "object";
-        const hasUserInfo = "userInfo" in obj && typeof (obj as any).userInfo === "object";
+        const u = (obj as Record<string, unknown>).user;
+        const ui = (obj as Record<string, unknown>).userInfo;
+        const hasUser = "user" in obj && isObject(u);
+        const hasUserInfo = "userInfo" in obj && isObject(ui);
         return !!(hasToken && (hasUser || hasUserInfo));
       };
       let payload: LoginPayload | null = null;
