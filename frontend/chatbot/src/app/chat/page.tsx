@@ -18,15 +18,19 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
 
   function generateId(): string {
-    try {
-      // 现代浏览器
-      // @ts-expect-error: 某些环境没有类型声明
-      if (typeof crypto !== "undefined" && crypto.randomUUID) {
-        // @ts-expect-error
-        return crypto.randomUUID();
+    // 优先用浏览器的 crypto.randomUUID（无 any/ts-ignore）
+    const g: unknown = globalThis;
+    const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
+    if (isObject(g)) {
+      const maybeCrypto = g["crypto"];
+      if (isObject(maybeCrypto)) {
+        const ru = (maybeCrypto as Record<string, unknown>)["randomUUID"];
+        if (typeof ru === "function") {
+          return (ru as () => string)();
+        }
       }
-    } catch {}
-    // 兜底
+    }
+    // 兜底：时间戳+随机串
     return `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   }
 
