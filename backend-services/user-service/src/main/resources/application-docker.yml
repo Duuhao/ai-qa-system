@@ -11,7 +11,7 @@ spring:
       config:
         enabled: false  # 禁用配置中心
   datasource:
-    url: jdbc:mysql://localhost:3306/ai_user_system?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true
+    url: jdbc:mysql://mysql:3306/ai_user_system?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true
     username: root
     password: ai_qa_system
     driver-class-name: com.mysql.cj.jdbc.Driver

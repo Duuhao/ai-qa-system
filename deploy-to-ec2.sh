@@ -197,6 +197,51 @@ docker compose -f docker-compose.prod.yml up -d
 echo "=== 等待服务启动 ==="
 sleep 30
 
+# 配置 Nginx
+echo "=== 配置 Nginx ==="
+if ! command -v nginx >/dev/null 2>&1; then
+  echo "安装 Nginx..."
+  if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update -y
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx
+  elif command -v yum >/dev/null 2>&1; then
+    sudo yum install -y nginx
+  fi
+fi
+
+# 创建 Nginx 配置
+sudo tee /etc/nginx/conf.d/ai-qa-system.conf << 'EOF'
+server {
+    listen 80;
+    server_name _;
+
+    # API 请求转发到网关
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+    }
+
+    # 前端页面
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+EOF
+
+# 启动 Nginx
+sudo systemctl enable nginx
+sudo systemctl start nginx
+sudo systemctl reload nginx
+
 # 健康检查
 echo "=== 健康检查 ==="
 curl -f http://localhost:8080/api/qa/health || echo "QA Service 健康检查失败"

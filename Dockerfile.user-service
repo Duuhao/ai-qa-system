@@ -6,18 +6,13 @@ WORKDIR /app
 # 安装 Maven
 RUN apt-get update && apt-get install -y maven dos2unix && rm -rf /var/lib/apt/lists/*
 
-# 一次性复制后端多模块项目（确保父子模块关系与源码路径完整）
+# 复制整个后端项目
 COPY backend-services/ ./backend-services/
 
-# 调试：确认UserService.java是否存在且包名正确，并规范化换行符
-RUN find /app/backend-services/user-service/src -maxdepth 3 -type f -name "UserService.java" -print || true \
-    && dos2unix /app/backend-services/user-service/src/main/java/com/ai/qa/user/application/UserService.java || true \
-    && head -n 80 /app/backend-services/user-service/src/main/java/com/ai/qa/user/application/UserService.java || true
-
-# 在父模块下按模块构建，确保注解处理与依赖解析一致
+# 在父模块下构建 user-service
 WORKDIR /app/backend-services
 RUN mvn -pl user-service -am clean package -DskipTests -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 -U
 
 # 运行应用
 EXPOSE 8081
-CMD ["java", "-jar", "backend-services/user-service/target/user-service-1.0-SNAPSHOT.jar"]
+CMD ["java", "-jar", "user-service/target/user-service-1.0-SNAPSHOT.jar"]

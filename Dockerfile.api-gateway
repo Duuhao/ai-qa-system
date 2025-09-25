@@ -3,20 +3,16 @@ FROM openjdk:17-jdk-slim
 
 WORKDIR /app
 
-# 复制 Maven 配置文件
-COPY backend-services/api-gateway/pom.xml .
-COPY backend-services/pom.xml ../
-
-# 下载依赖（利用 Docker 缓存层）
+# 安装 Maven
 RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
-RUN mvn dependency:go-offline -B
 
-# 复制源代码
-COPY backend-services/api-gateway/src ./src
+# 复制整个后端项目
+COPY backend-services/ ./backend-services/
 
-# 构建应用
-RUN mvn clean package -DskipTests
+# 在父模块下构建 api-gateway
+WORKDIR /app/backend-services
+RUN mvn -pl api-gateway -am clean package -DskipTests -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 -U
 
 # 运行应用
 EXPOSE 8080
-CMD ["java", "-jar", "target/api-gateway-1.0-SNAPSHOT.jar"]
+CMD ["java", "-jar", "api-gateway/target/api-gateway-1.0-SNAPSHOT.jar"]
