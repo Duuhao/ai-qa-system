@@ -17,6 +17,19 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
+  function generateId(): string {
+    try {
+      // 现代浏览器
+      // @ts-expect-error: 某些环境没有类型声明
+      if (typeof crypto !== "undefined" && crypto.randomUUID) {
+        // @ts-expect-error
+        return crypto.randomUUID();
+      }
+    } catch {}
+    // 兜底
+    return `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  }
+
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/login");
@@ -28,20 +41,22 @@ export default function ChatPage() {
     if (!text || loading) return;
     setInput("");
     const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       role: "user",
       content: text,
     };
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
     try {
-      const res = await fetch("/api/chat", {
+      // 便于排查：控制台打印一次
+      console.log("send /api/qa/ask", { question: text, userId: user?.username || "1" });
+      const res = await fetch("/api/qa/ask", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ 
-          message: text,
+          question: text,
           userId: user?.username || "1"
         }),
       });
@@ -51,14 +66,14 @@ export default function ChatPage() {
       }
       const data = (await res.json()) as { answer?: string; error?: string };
       const assistantMsg: ChatMessage = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         role: "assistant",
         content: data.answer ?? data.error ?? "",
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (e) {
       const assistantMsg: ChatMessage = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         role: "assistant",
         content: (e as Error).message,
       };
