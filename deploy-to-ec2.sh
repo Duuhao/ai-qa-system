@@ -198,7 +198,7 @@ docker compose -f docker-compose.prod.yml up -d
 echo "=== 等待服务启动 ==="
 sleep 30
 
-# 配置 Nginx（通过 CI/CD 下发热修：/api/user → 8081，/api/qa → 8082）
+# 配置 Nginx（标准：/api → 8080 网关；不在 EC2 手工改，由 CI/CD 统一下发）
 echo "=== 配置 Nginx ==="
 if ! command -v nginx >/dev/null 2>&1; then
   echo "安装 Nginx..."
@@ -218,7 +218,11 @@ sudo pkill -f "python.*80" 2>/dev/null || true
 
 # 备份默认配置
 sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup 2>/dev/null || true
+# 清理可能的重复默认站点/旧配置，避免 duplicate default server
 sudo rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
+sudo rm -f /etc/nginx/sites-enabled/ai-qa-system 2>/dev/null || true
+sudo rm -f /etc/nginx/conf.d/ai-qa-system.conf 2>/dev/null || true
+sudo rm -f /etc/nginx/conf.d/default.conf 2>/dev/null || true
 
 # 创建 Nginx 配置
 echo "创建 Nginx 配置..."
@@ -228,25 +232,20 @@ server {
     listen [::]:80 default_server;
     server_name _;
 
-    # 临时热修：直接转发到后端服务，绕过网关
-    location /api/user/ {
-        proxy_pass http://127.0.0.1:8081;
+    # API 统一转发到 API Gateway
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
-    }
-
-    location /api/qa/ {
-        proxy_pass http://127.0.0.1:8082;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_http_version 1.1;
-        proxy_set_header Connection "";
+        
+        # 超时设置
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
     }
 
     # 前端页面
