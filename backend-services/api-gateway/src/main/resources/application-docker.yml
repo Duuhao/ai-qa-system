@@ -3,7 +3,7 @@ server:
 
 logging:
   level:
-    org.springframework.cloud.gateway: INFO
+    org.springframework.cloud.gateway: DEBUG
     reactor.netty.http.client: WARN
 
 spring:
@@ -14,11 +14,6 @@ spring:
       discovery:
         locator:
           enabled: false
-    nacos:
-      discovery:
-        enabled: false
-      config:
-        enabled: false
       routes:
         - id: qa-service
           uri: http://qa-service:8082
@@ -28,4 +23,9 @@ spring:
           uri: http://user-service:8081
           predicates:
             - Path=/api/user/**
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
 

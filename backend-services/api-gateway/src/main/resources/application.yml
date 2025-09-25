@@ -20,11 +20,6 @@ spring:
       discovery:
         locator:
           enabled: false
-    nacos:
-      discovery:
-        enabled: false
-      config:
-        enabled: false
       routes:
         # QA Service 路由
         - id: qa-service
@@ -36,3 +31,8 @@ spring:
           uri: http://localhost:8081
           predicates:
             - Path=/api/user/**
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
