@@ -32,7 +32,12 @@ export default function LoginPage() {
       });
 
       const contentType = response.headers.get("content-type") || "";
-      type LoginPayload = { token: string; user: { username: string } } | { error?: string; message?: string };
+      type LoginSuccess = { token: string; user: { username: string } };
+      type LoginError = { error?: string; message?: string };
+      type LoginPayload = LoginSuccess | LoginError;
+      const isLoginSuccess = (p: unknown): p is LoginSuccess => {
+        return !!p && typeof p === "object" && "token" in (p as Record<string, unknown>) && "user" in (p as Record<string, unknown>);
+      };
       let payload: LoginPayload | null = null;
       if (contentType.includes("application/json")) {
         payload = await response.json();
@@ -46,17 +51,17 @@ export default function LoginPage() {
 
       if (!response.ok) {
         let msg = `登录失败 (HTTP ${response.status})`;
-        if (payload && 'error' in payload && payload.error) {
-          msg = payload.error;
-        } else if (payload && 'message' in payload && payload.message) {
-          msg = payload.message;
+        if (payload && typeof payload === 'object' && 'error' in payload && (payload as LoginError).error) {
+          msg = (payload as LoginError).error as string;
+        } else if (payload && typeof payload === 'object' && 'message' in payload && (payload as LoginError).message) {
+          msg = (payload as LoginError).message as string;
         }
         throw new Error(msg);
       }
 
       // 使用 AuthContext 的 login 方法更新认证状态
       // 类型收窄
-      if (!('token' in payload) || !('user' in payload)) {
+      if (!isLoginSuccess(payload)) {
         throw new Error('登录响应格式不正确');
       }
       login(payload.token, payload.user);
