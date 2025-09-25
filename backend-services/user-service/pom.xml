@@ -58,11 +58,11 @@
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
-        <!-- Swagger API文档 - 使用SpringDoc OpenAPI 3 -->
+        <!-- Swagger/OpenAPI - Spring Boot 3.x 使用 2.x starter (WebMVC) -->
         <dependency>
             <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-ui</artifactId>
-            <version>1.6.15</version>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.6.0</version>
         </dependency>
     </dependencies>
 

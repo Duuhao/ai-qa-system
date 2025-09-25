@@ -41,11 +41,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
-        <!-- Swagger/OpenAPI UI -->
+        <!-- Swagger/OpenAPI - Spring Boot 3.x 使用 2.x starter (WebMVC) -->
         <dependency>
             <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-ui</artifactId>
-            <version>1.6.15</version>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.6.0</version>
         </dependency>
         <!-- H2数据库（用于测试） -->
         <dependency>
