@@ -130,7 +130,7 @@ services:
     container_name: ai-qa-user-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ai_qa_system?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ai_user_system?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ai_qa_system
     ports:
@@ -174,6 +174,7 @@ services:
     environment:
       BACKEND_BASE_URL: http://api-gateway:8080
     ports:
+      - "80:3000"
       - "3000:3000"
     depends_on:
       - api-gateway
@@ -202,8 +203,13 @@ curl -f http://localhost:8080/api/qa/health || echo "QA Service 健康检查失�
 curl -f http://localhost:8081/api/user/health || echo "User Service 健康检查失败"
 curl -f http://localhost:3000 || echo "Frontend 健康检查失败"
 
+# 打印关键服务日志（最近200行），便于定位错误
+echo "=== 关键服务日志（user-service, api-gateway） ==="
+docker compose logs --tail 200 user-service || true
+docker compose logs --tail 200 api-gateway || true
+
 echo "=== 部署完成 ==="
 echo "服务访问地址:"
-echo "  Frontend: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):3000"
+echo "  Frontend: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)"
 echo "  API Gateway: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):8080"
 
