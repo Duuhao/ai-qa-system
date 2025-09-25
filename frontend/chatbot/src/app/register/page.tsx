@@ -57,7 +57,13 @@ export default function RegisterPage() {
       }
 
       if (!response.ok) {
-        throw new Error(payload?.error || payload?.message || `注册失败 (HTTP ${response.status})`);
+        let msg = `注册失败 (HTTP ${response.status})`;
+        if (payload && 'error' in payload && payload.error) {
+          msg = payload.error;
+        } else if (payload && 'message' in payload && payload.message) {
+          msg = payload.message;
+        }
+        throw new Error(msg);
       }
 
       // 使用 AuthContext 的 login 方法更新认证状态
