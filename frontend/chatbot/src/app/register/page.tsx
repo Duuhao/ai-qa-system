@@ -44,7 +44,8 @@ export default function RegisterPage() {
       });
 
       const contentType = response.headers.get("content-type") || "";
-      let payload: any = null;
+      type RegisterPayload = { token: string; user: { username: string } } | { error?: string; message?: string };
+      let payload: RegisterPayload | null = null;
       if (contentType.includes("application/json")) {
         payload = await response.json();
       } else {
@@ -60,6 +61,9 @@ export default function RegisterPage() {
       }
 
       // 使用 AuthContext 的 login 方法更新认证状态
+      if (!('token' in payload) || !('user' in payload)) {
+        throw new Error('注册响应格式不正确');
+      }
       login(payload.token, payload.user);
 
       // 跳转到聊天页面

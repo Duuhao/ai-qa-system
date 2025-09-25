@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userData = JSON.parse(savedUser);
         setToken(savedToken);
         setUser(userData);
-      } catch (error) {
+      } catch {
         // 如果解析失败，清除无效数据
         localStorage.removeItem("token");
         localStorage.removeItem("user");
