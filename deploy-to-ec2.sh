@@ -96,6 +96,8 @@ aws ecr get-login-password --region "$AWS_REGION_VALUE" | docker login --usernam
 # 停止现有容器
 echo "=== 停止现有容器 ==="
 docker compose down || true
+# 停止上一次使用 prod 文件启动的容器（如有）
+docker compose -f docker-compose.prod.yml down || true
 
 # 拉取最新镜像
 echo "=== 拉取最新镜像 ==="
@@ -174,7 +176,6 @@ services:
     environment:
       BACKEND_BASE_URL: http://api-gateway:8080
     ports:
-      - "80:3000"
       - "3000:3000"
     depends_on:
       - api-gateway
@@ -209,10 +210,21 @@ if ! command -v nginx >/dev/null 2>&1; then
   fi
 fi
 
+# 停止可能占用端口 80 的服务
+echo "停止可能占用端口 80 的服务..."
+sudo systemctl stop apache2 2>/dev/null || true
+sudo systemctl stop httpd 2>/dev/null || true
+sudo pkill -f "python.*80" 2>/dev/null || true
+
+# 备份默认配置
+sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup 2>/dev/null || true
+
 # 创建 Nginx 配置
-sudo tee /etc/nginx/conf.d/ai-qa-system.conf << 'EOF'
+echo "创建 Nginx 配置..."
+sudo tee /etc/nginx/sites-available/ai-qa-system << 'EOF'
 server {
-    listen 80;
+    listen 80 default_server;
+    listen [::]:80 default_server;
     server_name _;
 
     # API 请求转发到网关
@@ -224,6 +236,11 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
+        
+        # 超时设置
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
     }
 
     # 前端页面
@@ -233,25 +250,54 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # WebSocket 支持
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
     }
 }
 EOF
 
+# 启用站点配置
+sudo ln -sf /etc/nginx/sites-available/ai-qa-system /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+
+# 测试 Nginx 配置
+echo "测试 Nginx 配置..."
+sudo nginx -t
+
 # 启动 Nginx
+echo "启动 Nginx..."
 sudo systemctl enable nginx
-sudo systemctl start nginx
-sudo systemctl reload nginx
+sudo systemctl restart nginx
+
+# 检查 Nginx 状态
+echo "Nginx 状态:"
+sudo systemctl status nginx --no-pager -l
 
 # 健康检查
 echo "=== 健康检查 ==="
+sleep 10  # 等待服务完全启动
+
+echo "检查容器状态:"
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+echo "检查服务健康:"
+curl -f http://localhost:8080/api/user/health || echo "User Service 健康检查失败"
 curl -f http://localhost:8080/api/qa/health || echo "QA Service 健康检查失败"
-curl -f http://localhost:8081/api/user/health || echo "User Service 健康检查失败"
 curl -f http://localhost:3000 || echo "Frontend 健康检查失败"
 
-# 打印关键服务日志（最近200行），便于定位错误
-echo "=== 关键服务日志（user-service, api-gateway） ==="
-docker compose logs --tail 200 user-service || true
-docker compose logs --tail 200 api-gateway || true
+echo "检查 Nginx 代理:"
+curl -f http://localhost/api/user/health || echo "Nginx 代理 User Service 失败"
+curl -f http://localhost/api/qa/health || echo "Nginx 代理 QA Service 失败"
+curl -f http://localhost || echo "Nginx 代理 Frontend 失败"
+
+# 打印关键服务日志（最近50行），便于定位错误
+echo "=== 关键服务日志 ==="
+docker compose logs --tail 50 user-service || true
+docker compose logs --tail 50 api-gateway || true
+docker compose logs --tail 50 qa-service || true
 
 echo "=== 部署完成 ==="
 echo "服务访问地址:"

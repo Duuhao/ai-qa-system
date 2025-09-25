@@ -92,10 +92,22 @@ jobs:
           echo "=== 等待服务启动 ==="
           sleep 30
           
+          echo "=== 检查容器状态 ==="
+          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          
           echo "=== 健康检查 ==="
           curl -f http://localhost:8080/api/user/health || echo "User Service 健康检查失败"
           curl -f http://localhost:8080/api/qa/health || echo "QA Service 健康检查失败"
           curl -f http://localhost:3000 || echo "Frontend 健康检查失败"
           
-          echo "=== 服务状态 ==="
-          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo "=== 检查 Nginx 代理 ==="
+          curl -f http://localhost/api/user/health || echo "Nginx 代理 User Service 失败"
+          curl -f http://localhost/api/qa/health || echo "Nginx 代理 QA Service 失败"
+          curl -f http://localhost || echo "Nginx 代理 Frontend 失败"
+          
+          echo "=== Nginx 状态 ==="
+          sudo systemctl status nginx --no-pager -l
+          
+          echo "=== 服务日志 ==="
+          docker compose logs --tail 20 user-service || true
+          docker compose logs --tail 20 api-gateway || true
