@@ -20,6 +20,11 @@ spring:
       discovery:
         locator:
           enabled: false
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
       routes:
         # QA Service 路由
         - id: qa-service

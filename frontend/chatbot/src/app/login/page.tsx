@@ -31,14 +31,24 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type") || "";
+      let payload: any = null;
+      if (contentType.includes("application/json")) {
+        payload = await response.json();
+      } else {
+        const text = await response.text();
+        if (!response.ok) {
+          throw new Error(text || `登录失败 (HTTP ${response.status})`);
+        }
+        throw new Error(text || "登录失败");
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || "登录失败");
+        throw new Error(payload?.error || payload?.message || `登录失败 (HTTP ${response.status})`);
       }
 
       // 使用 AuthContext 的 login 方法更新认证状态
-      login(data.token, data.user);
+      login(payload.token, payload.user);
 
       // 跳转到聊天页面
       router.push("/chat");

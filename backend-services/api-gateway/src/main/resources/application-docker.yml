@@ -14,6 +14,11 @@ spring:
       discovery:
         locator:
           enabled: false
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
       routes:
         - id: qa-service
           uri: http://qa-service:8082
