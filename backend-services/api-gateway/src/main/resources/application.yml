@@ -57,8 +57,11 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui/index.html
+    config-url: /v3/api-docs/swagger-config
+    disable-swagger-default-url: true
     urls:
       - name: user
         url: /v3/api-docs/user
       - name: qa
         url: /v3/api-docs/qa
+    urls-primary-name: user
