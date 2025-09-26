@@ -44,4 +44,37 @@ public class UserController {
     public String health() {
         return "User Service is running!";
     }
+
+    // ========== 以下为演示用空实现，仅用于在 Swagger 中展示 ==========
+
+    @PutMapping("/{userId}/nickname")
+    public UserInfoResponse updateNickname(@PathVariable("userId") Long userId,
+                                           @Valid @RequestBody UpdateNicknameRequest request) {
+        log.info("更新昵称(空实现): userId={}, nickname={}", userId, request.getNickname());
+        // 空实现：仅返回占位数据，实际逻辑待实现
+        UserInfoResponse resp = new UserInfoResponse();
+        resp.setId(String.valueOf(userId));
+        resp.setUsername("demoUser");
+        resp.setNickname(request.getNickname());
+        return resp;
+    }
+
+    @PutMapping("/{userId}/password")
+    public boolean changePassword(@PathVariable("userId") Long userId,
+                                  @Valid @RequestBody ChangePasswordRequest request) {
+        log.info("修改密码(空实现): userId={}", userId);
+        return true;
+    }
+
+    @DeleteMapping("/{userId}")
+    public boolean deleteUser(@PathVariable("userId") Long userId) {
+        log.info("删除用户(空实现): userId={}", userId);
+        return true;
+    }
+
+    @PostMapping("/logout")
+    public boolean logout() {
+        log.info("退出登录(空实现)");
+        return true;
+    }
 }

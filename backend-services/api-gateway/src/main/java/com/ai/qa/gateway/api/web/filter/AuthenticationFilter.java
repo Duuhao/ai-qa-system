@@ -30,7 +30,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         List<String> whiteList = List.of(
                 "/api/user/register", "/api/user/login",
                 "/api/qa/health", "/api/qa/test", "/api/qa/ask", "/api/user/health",
-                "/v3/api-docs", "/swagger-ui/index.html"
+                "/v3/api-docs", "/swagger-ui/index.html", "/swagger-ui.html"
         );
         if (whiteList.contains(request.getURI().getPath())) {
             return chain.filter(exchange);
